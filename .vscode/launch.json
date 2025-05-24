@@ -1,0 +1,56 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "command": "npm run dev",
+            "name": "Run npm run dev",
+            "request": "launch",
+            "type": "node-terminal",
+            "cwd": "${workspaceFolder}/frontend"
+        },
+        {
+            "name": "FastAPI: Run Server",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/backend/run.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "python": "${workspaceFolder}/backend/venv/bin/python",
+            "cwd": "${workspaceFolder}/backend",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/backend",
+                "VIRTUAL_ENV": "${workspaceFolder}/backend/venv"
+            }
+        },
+        {
+            "name": "FastAPI: Debug Server",
+            "type": "python",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "app.main:app",
+                "--reload",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "8000"
+            ],
+            "jinja": true,
+            "justMyCode": false,
+            "python": "${workspaceFolder}/backend/venv/bin/python",
+            "cwd": "${workspaceFolder}/backend",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/backend",
+                "VIRTUAL_ENV": "${workspaceFolder}/backend/venv"
+            }
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Server/Debug",
+            "configurations": [
+                "FastAPI: Debug Server"
+            ]
+        }
+    ]
+}
