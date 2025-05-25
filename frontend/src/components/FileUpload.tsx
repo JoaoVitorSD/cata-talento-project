@@ -1,14 +1,5 @@
-import type { HRData } from '@/types/hr-data'
+import type { ProcessResponse } from '@/types/validation'
 import { useCallback, useState } from 'react'
-
-interface ValidationErrors {
-    [key: string]: string[]
-}
-
-interface ProcessResponse {
-    hr_data: HRData | null
-    errors: ValidationErrors
-}
 
 interface FileUploadProps {
     onUploadSuccess: (data: ProcessResponse) => void
@@ -19,7 +10,6 @@ interface FileUploadProps {
 export default function FileUpload({ onUploadSuccess, setLoading, setCurrentData }: FileUploadProps) {
     const [dragActive, setDragActive] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    const [currentFile, setCurrentFile] = useState<File | null>(null)
     const [saveSuccess, setSaveSuccess] = useState(false)
 
     const handleDrag = useCallback((e: React.DragEvent) => {
@@ -37,8 +27,6 @@ export default function FileUpload({ onUploadSuccess, setLoading, setCurrentData
             setError('Por favor, envie um arquivo PDF')
             return
         }
-
-        setCurrentFile(file)
         const formData = new FormData()
         formData.append('file', file)
         setError(null)
@@ -74,34 +62,6 @@ export default function FileUpload({ onUploadSuccess, setLoading, setCurrentData
         }
     }
 
-    const requestSummary = async () => {
-        if (!currentFile) {
-            setError('Please upload a file first')
-            return
-        }
-
-        setLoading(true)
-        const formData = new FormData()
-        formData.append('file', currentFile)
-
-        try {
-            const response = await fetch('http://localhost:8000/summarize-pdf', {
-                method: 'POST',
-                body: formData,
-            })
-
-            if (!response.ok) {
-                throw new Error('Failed to get summary')
-            }
-
-            const data = await response.json()
-            onUploadSuccess(data)
-        } catch (err) {
-            setError('Error getting summary. Please try again.')
-        } finally {
-            setLoading(false)
-        }
-    }
 
     const handleDrop = useCallback((e: React.DragEvent) => {
         e.preventDefault()
@@ -171,27 +131,6 @@ export default function FileUpload({ onUploadSuccess, setLoading, setCurrentData
                 </div>
             </div>
 
-            {currentFile && (
-                <button
-                    onClick={requestSummary}
-                    className="w-full py-3 px-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center justify-center space-x-2"
-                >
-                    <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                        />
-                    </svg>
-                    <span>Get Document Summary</span>
-                </button>
-            )}
         </div>
     )
 } 

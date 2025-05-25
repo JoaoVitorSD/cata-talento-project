@@ -12,12 +12,9 @@ export interface WorkExperience {
 export interface HRData {
     name: string;
     cpf: string;
-    date: string;
     position?: string;
-    department?: string;
     salary?: number | null;
     contract_type?: string;
-    start_date?: string;
     main_skills?: string[];
     hard_skills?: string[];
     work_experience: WorkExperience[];

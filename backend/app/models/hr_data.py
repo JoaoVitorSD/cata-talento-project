@@ -52,12 +52,9 @@ class WorkExperience(BaseModel):
 class HRData(BaseModel):
     name: str = Field(..., min_length=3, description="Nome completo")
     cpf: str = Field(..., description="CPF no formato XXX.XXX.XXX-XX")
-    date: datetime = Field(..., description="Data do documento")
     position: Optional[str] = Field(None, min_length=2, description="Cargo pretendido")
-    department: Optional[str] = Field(None, description="Departamento")
     salary: Optional[float] = Field(None, gt=0, description="Salário pretendido")
     contract_type: Optional[str] = Field(None, description="Tipo de contrato")
-    start_date: Optional[datetime] = Field(None, description="Data de início")
     main_skills: Optional[List[str]] = Field(default=None, description="Habilidades principais")
     hard_skills: Optional[List[str]] = Field(default=None, description="Habilidades técnicas")
     work_experience: List[WorkExperience] = Field(default=[], description="Experiências profissionais")
@@ -102,12 +99,6 @@ class HRData(BaseModel):
         # Format CPF to standard format
         return f'{cpf_digits[:3]}.{cpf_digits[3:6]}.{cpf_digits[6:9]}-{cpf_digits[9:]}'
 
-    @validator('date')
-    def validate_date(cls, date):
-        if date > datetime.now():
-            raise ValueError('A data do documento não pode ser no futuro')
-        return date
-
     @validator('salary')
     def validate_salary(cls, salary):
         if salary is not None and salary <= 0:
@@ -130,27 +121,14 @@ class HRData(BaseModel):
                     raise ValueError('Cada habilidade técnica deve ter pelo menos 2 caracteres')
         return skills
 
-    @validator('start_date')
-    def validate_start_date(cls, start_date, values):
-        if start_date and start_date > datetime.now():
-            raise ValueError('A data de início não pode ser no futuro')
-        
-        if start_date and 'date' in values and start_date < values['date']:
-            raise ValueError('A data de início não pode ser anterior à data do documento')
-        
-        return start_date
-
     class Config:
         json_schema_extra = {
             "example": {
                 "name": "John Doe",
                 "cpf": "123.456.789-00",
-                "date": "2024-03-20T00:00:00",
                 "position": "Software Engineer",
-                "department": "Engineering",
                 "salary": 5000.00,
                 "contract_type": "CLT",
-                "start_date": "2024-03-20T00:00:00",
                 "main_skills": ["Leadership", "Communication", "Problem Solving"],
                 "hard_skills": ["Python", "React", "MongoDB", "Docker"],
                 "work_experience": [

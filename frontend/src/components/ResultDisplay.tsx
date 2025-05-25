@@ -20,12 +20,9 @@ const createHRData = (data: Partial<HRData>): HRData => {
     return {
         name: data.name || '',
         cpf: data.cpf || '',
-        date: data.date || '',
         position: data.position,
-        department: data.department,
         salary: data.salary ?? null,
         contract_type: data.contract_type,
-        start_date: data.start_date,
         main_skills: data.main_skills || [],
         hard_skills: data.hard_skills || [],
         work_experience: data.work_experience || []
@@ -50,10 +47,25 @@ const updateHRDataField = (data: HRData, field: keyof HRData, value: any): HRDat
     return updatedData
 }
 
+// Add this helper function after the createHRData function
+const getFieldLabel = (field: string): string => {
+    const fieldLabels: { [key: string]: string } = {
+        name: 'Nome',
+        cpf: 'CPF',
+        position: 'Cargo',
+        salary: 'Salário',
+        contract_type: 'Tipo de Contrato',
+        main_skills: 'Competências Comportamentais',
+        hard_skills: 'Competências Técnicas',
+        work_experience: 'Experiência Profissional'
+    }
+    return fieldLabels[field] || field
+}
+
 export default function ResultDisplay({ data, onDataChange }: ResultDisplayProps) {
     const [isEditing, setIsEditing] = useState(false)
-    const [editableData, setEditableData] = useState<HRData | null>(data.hr_data ? createHRData(data.hr_data) : null)
-    const [validationErrors, setValidationErrors] = useState<ValidationErrors>(data.errors??{})
+    const [editableData, setEditableData] = useState<HRData | null>(data.hr_data ?? null)
+    const [validationErrors, setValidationErrors] = useState<ValidationErrors>(data.errors ?? {})
     const [newSkill, setNewSkill] = useState({ main: '', hard: '' })
     const [newExperience, setNewExperience] = useState<WorkExperience>({
         company: '',
@@ -119,27 +131,37 @@ export default function ResultDisplay({ data, onDataChange }: ResultDisplayProps
         const skillValue = type === 'main_skills' ? newSkill.main : newSkill.hard
         if (!skillValue.trim()) return
 
-        setEditableData(prev => ({
-            ...prev,
-            [type]: [...(prev[type] || []), skillValue.trim()]
-        }))
+        setEditableData(prev => {
+            if (!prev) return null
+            return {
+                ...prev,
+                [type]: [...(prev[type] || []), skillValue.trim()]
+            }
+        })
         setNewSkill(prev => ({ ...prev, [type === 'main_skills' ? 'main' : 'hard']: '' }))
     }
 
     const removeSkill = (type: 'main_skills' | 'hard_skills', index: number) => {
-        setEditableData(prev => ({
-            ...prev,
-            [type]: (prev[type] || []).filter((_, i) => i !== index)
-        }))
+
+        setEditableData(prev => {
+            if (!prev) return null
+            return {
+                ...prev,
+                [type]: (prev[type] || []).filter((_, i) => i !== index)
+            }
+        })
     }
 
     const addWorkExperience = () => {
         if (!newExperience.company || !newExperience.position || !newExperience.description) return
 
-        setEditableData(prev => ({
-            ...prev,
-            work_experience: [...prev.work_experience, { ...newExperience }]
-        }))
+        setEditableData(prev => {
+            if (!prev) return null
+            return {
+                ...prev,
+                work_experience: [...prev.work_experience, { ...newExperience }]
+            }
+        })
         setNewExperience({
             company: '',
             position: '',
@@ -153,43 +175,23 @@ export default function ResultDisplay({ data, onDataChange }: ResultDisplayProps
     }
 
     const removeWorkExperience = (index: number) => {
-        setEditableData(prev => ({
-            ...prev,
-            work_experience: prev.work_experience.filter((_, i) => i !== index)
-        }))
-    }
-
-    const addAchievement = (experienceIndex: number) => {
-        if (!newAchievement.trim()) return
-
         setEditableData(prev => {
-            const newWorkExperience = [...prev.work_experience]
-            newWorkExperience[experienceIndex].achievements.push(newAchievement.trim())
-            return { ...prev, work_experience: newWorkExperience }
+            if (!prev) return null
+            return {
+                ...prev,
+                work_experience: prev.work_experience.filter((_, i) => i !== index)
+            }
         })
-        setNewAchievement('')
     }
 
-    const addTechnology = (experienceIndex: number) => {
-        if (!newTechnology.trim()) return
-
-        setEditableData(prev => {
-            const newWorkExperience = [...prev.work_experience]
-            newWorkExperience[experienceIndex].technologies_used.push(newTechnology.trim())
-            return { ...prev, work_experience: newWorkExperience }
-        })
-        setNewTechnology('')
-    }
+    
 
     const basicFields = [
         { label: 'Nome', field: 'name' as keyof HRData, type: 'text', required: true },
         { label: 'CPF', field: 'cpf' as keyof HRData, type: 'text', required: true },
-        { label: 'Data', field: 'date' as keyof HRData, type: 'datetime-local', required: true },
         { label: 'Cargo', field: 'position' as keyof HRData, type: 'text', required: false },
-        { label: 'Departamento', field: 'department' as keyof HRData, type: 'text', required: false },
         { label: 'Salário', field: 'salary' as keyof HRData, type: 'number', required: false },
         { label: 'Tipo de Contrato', field: 'contract_type' as keyof HRData, type: 'text', required: false },
-        { label: 'Data de Início', field: 'start_date' as keyof HRData, type: 'datetime-local', required: false },
     ]
 
     if (!editableData) {
@@ -211,7 +213,7 @@ export default function ResultDisplay({ data, onDataChange }: ResultDisplayProps
         <div className="bg-white rounded-lg shadow-lg p-6 animate-fade-in space-y-8 w-full">
             <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-semibold text-indigo-900">
-                    {isEditing ? 'Editar Informações' : 'Informações do Documento'}
+                    {isEditing ? 'Editar Informações' : 'Informações do Currículo'}
                 </h2>
                 <button
                     onClick={() => isEditing ? handleSaveChanges() : setIsEditing(true)}
@@ -226,8 +228,7 @@ export default function ResultDisplay({ data, onDataChange }: ResultDisplayProps
                 {basicFields.map(({ label, field, type, required }) => (
                     <div
                         key={field}
-                        className={`bg-gray-50 rounded-lg p-4 border ${validationErrors[field] ? 'border-red-300' : 'border-gray-100'
-                            }`}
+                        className={`bg-gray-50 rounded-lg p-4 border ${validationErrors[field] ? 'border-red-300' : 'border-gray-100'}`}
                     >
                         <p className="text-sm font-medium text-gray-500">
                             {label}
@@ -239,14 +240,17 @@ export default function ResultDisplay({ data, onDataChange }: ResultDisplayProps
                                     type={type}
                                     value={editableData[field]?.toString() || ''}
                                     onChange={(e) => handleInputChange(field, e.target.value)}
-                                    className={`mt-1 w-full p-2 border rounded-md focus:ring-2 focus:ring-indigo-500 ${validationErrors[field] ? 'border-red-300' : ''
-                                        }`}
+                                    className={`mt-1 w-full p-2 border rounded-md focus:ring-2 focus:ring-indigo-500 ${validationErrors[field] ? 'border-red-300' : ''}`}
                                     required={required}
                                 />
                                 {validationErrors[field] && (
-                                    <p className="mt-1 text-sm text-red-600">
-                                        {validationErrors[field].join(', ')}
-                                    </p>
+                                    <div className="mt-1 space-y-1">
+                                        {validationErrors[field].map((error, index) => (
+                                            <p key={index} className="text-sm text-red-600">
+                                                <span className="font-medium">{getFieldLabel(field)}:</span> {error}
+                                            </p>
+                                        ))}
+                                    </div>
                                 )}
                             </div>
                         ) : (
@@ -346,9 +350,13 @@ export default function ResultDisplay({ data, onDataChange }: ResultDisplayProps
             <div className="bg-purple-50 rounded-lg p-6 border border-purple-100">
                 <h3 className="text-xl font-semibold text-purple-900 mb-4">Experiência Profissional</h3>
                 {validationErrors['work_experience'] && (
-                    <p className="mb-4 text-sm text-red-600">
-                        {validationErrors['work_experience'].join(', ')}
-                    </p>
+                    <div className="mb-4 space-y-1">
+                        {validationErrors['work_experience'].map((error, index) => (
+                            <p key={index} className="text-sm text-red-600">
+                                <span className="font-medium">{getFieldLabel('work_experience')}:</span> {error}
+                            </p>
+                        ))}
+                    </div>
                 )}
 
                 {editableData.work_experience?.map((exp, index) => (
@@ -407,6 +415,16 @@ export default function ResultDisplay({ data, onDataChange }: ResultDisplayProps
                                 ))}
                             </div>
                         </div>
+
+                        {validationErrors[`work_experience.${index}`] && (
+                            <div className="mt-2 space-y-1">
+                                {validationErrors[`work_experience.${index}`]?.map((error, i) => (
+                                    <p key={i} className="text-sm text-red-600">
+                                        <span className="font-medium">Experiência {index + 1}:</span> {error}
+                                    </p>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 ))}
 

@@ -3,26 +3,14 @@ import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import FileUpload from './components/FileUpload'
 import ResultDisplay from './components/ResultDisplay'
-import type { HRData } from './types/hr-data'
+import type { ProcessResponse } from './types/validation'
 
 function App() {
-  const [hrData, setHRData] = useState<HRData | null>(() => ({
-    name: '',
-    cpf: '',
-    date: new Date().toISOString(),
-    position: '',
-    department: '',
-    salary: null,
-    contract_type: '',
-    start_date: new Date().toISOString(),
-    main_skills: [],
-    hard_skills: [],
-    work_experience: []
-  }))
+  const [hrData, setHRData] = useState<ProcessResponse | null>(null)
   const [loading, setLoading] = useState(false)
 
   const handleSaveToMongoDB = async () => {
-    if (!hrData) return
+    if (!hrData?.hr_data) return
 
     setLoading(true)
 
@@ -32,7 +20,7 @@ function App() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(hrData),
+        body: JSON.stringify(hrData.hr_data),
       })
 
       if (!response.ok) {
@@ -48,7 +36,7 @@ function App() {
     }
   }
 
-  const handleDataChange = (newData: HRData) => {
+  const handleDataChange = (newData: ProcessResponse) => {
     setHRData(newData)
     toast.info('Informações atualizadas')
   }

@@ -73,12 +73,9 @@ class AnthropicService:
         return f"""Extract the following fields from this HR document text if present: 
         - name
         - cpf
-        - date
         - position
-        - department
         - salary
         - contract_type
-        - start_date
         - main_skills (list of soft/interpersonal skills)
         - hard_skills (list of technical skills, tools, technologies)
         - work_experience (list of work experiences with the following structure for each):
