@@ -3,6 +3,7 @@ import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import FileUpload from './components/FileUpload'
 import ResultDisplay from './components/ResultDisplay'
+import api from './lib/api'
 import type { ProcessResponse } from './types/validation'
 
 function App() {
@@ -15,20 +16,8 @@ function App() {
     setLoading(true)
 
     try {
-      const response = await fetch('http://localhost:8000/api/v1/store-document', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(hrData.hr_data),
-      })
-
-      if (!response.ok) {
-        throw new Error('Falha ao enviar documento')
-      }
-
-      const result = await response.json()
-      toast.success(`Documento enviado com sucesso! ID: ${result.document_id}`)
+      const { data } = await api.post('/store-document', hrData.hr_data)
+      toast.success(`Documento enviado com sucesso! ID: ${data.document_id}`)
     } catch (error) {
       toast.error('Falha ao enviar documento. Por favor, tente novamente.')
     } finally {

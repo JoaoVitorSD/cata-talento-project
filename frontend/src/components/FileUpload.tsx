@@ -1,3 +1,4 @@
+import api from '@/lib/api'
 import type { ProcessResponse } from '@/types/validation'
 import { useCallback, useState } from 'react'
 
@@ -34,16 +35,11 @@ export default function FileUpload({ onUploadSuccess, setLoading, setCurrentData
         setSaveSuccess(false)
 
         try {
-            const response = await fetch('http://localhost:8000/api/v1/process-pdf', {
-                method: 'POST',
-                body: formData,
+            const { data } = await api.post<ProcessResponse>('/process-pdf', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
             })
-
-            if (!response.ok) {
-                throw new Error('Falha ao processar arquivo')
-            }
-
-            const data: ProcessResponse = await response.json()
 
             // Check if there are any validation errors
             if (Object.keys(data.errors).length > 0) {
