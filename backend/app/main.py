@@ -6,6 +6,7 @@ import sys
 import traceback
 from datetime import datetime
 from .api.endpoints import router
+from .core.dependencies import initialize_services, shutdown_services
 from dotenv import load_dotenv
 import os
 
@@ -34,6 +35,25 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize services on application startup."""
+    try:
+        initialize_services()
+        logger.info("Application startup completed successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize application: {str(e)}")
+        raise
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup services on application shutdown."""
+    try:
+        shutdown_services()
+        logger.info("Application shutdown completed successfully")
+    except Exception as e:
+        logger.error(f"Error during application shutdown: {str(e)}")
 
 @app.middleware("http")
 async def catch_exceptions_middleware(request: Request, call_next):

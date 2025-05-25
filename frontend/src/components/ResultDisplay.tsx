@@ -1,14 +1,59 @@
 import { useEffect, useState } from 'react'
 import type { HRData, WorkExperience } from '../types/hr-data'
 
+interface ValidationErrors {
+    [key: string]: string[]
+}
+
+interface ProcessResponse {
+    hr_data: HRData | null
+    errors: ValidationErrors
+}
+
 interface ResultDisplayProps {
-    data: HRData
-    onDataChange: (data: HRData) => void
+    data: ProcessResponse
+    onDataChange: (data: ProcessResponse) => void
+}
+
+// Helper function to create a valid HRData object
+const createHRData = (data: Partial<HRData>): HRData => {
+    return {
+        name: data.name || '',
+        cpf: data.cpf || '',
+        date: data.date || '',
+        position: data.position,
+        department: data.department,
+        salary: data.salary ?? null,
+        contract_type: data.contract_type,
+        start_date: data.start_date,
+        main_skills: data.main_skills || [],
+        hard_skills: data.hard_skills || [],
+        work_experience: data.work_experience || []
+    }
+}
+
+// Helper function to update HRData field
+const updateHRDataField = (data: HRData, field: keyof HRData, value: any): HRData => {
+    const updatedData = { ...data }
+
+    // Handle different field types
+    if (field === 'salary') {
+        updatedData[field] = value === '' ? null : Number(value)
+    } else if (field === 'work_experience') {
+        updatedData[field] = value as WorkExperience[]
+    } else if (field === 'main_skills' || field === 'hard_skills') {
+        updatedData[field] = value as string[]
+    } else {
+        updatedData[field] = value as string
+    }
+
+    return updatedData
 }
 
 export default function ResultDisplay({ data, onDataChange }: ResultDisplayProps) {
     const [isEditing, setIsEditing] = useState(false)
-    const [editableData, setEditableData] = useState<HRData>(data)
+    const [editableData, setEditableData] = useState<HRData | null>(data.hr_data ? createHRData(data.hr_data) : null)
+    const [validationErrors, setValidationErrors] = useState<ValidationErrors>(data.errors??{})
     const [newSkill, setNewSkill] = useState({ main: '', hard: '' })
     const [newExperience, setNewExperience] = useState<WorkExperience>({
         company: '',
@@ -25,25 +70,48 @@ export default function ResultDisplay({ data, onDataChange }: ResultDisplayProps
 
     useEffect(() => {
         // Fetch template data when component mounts and no data is provided
-        if (!data.name && !data.cpf) {
+        if (!data.hr_data?.name && !data.hr_data?.cpf) {
             fetch('http://localhost:8000/api/v1/template')
                 .then(response => response.json())
                 .then(templateData => {
-                    setEditableData(templateData)
-                    onDataChange(templateData)
+                    const response: ProcessResponse = {
+                        hr_data: createHRData(templateData),
+                        errors: {}
+                    }
+                    setEditableData(response.hr_data)
+                    onDataChange(response)
                 })
                 .catch(error => console.error('Error fetching template:', error))
-        }else{
-            setEditableData(data)
+        } else if (data.hr_data) {
+            setEditableData(createHRData(data.hr_data))
+            setValidationErrors(data.errors)
         }
     }, [data, onDataChange])
 
     const handleInputChange = (field: keyof HRData, value: any) => {
-        setEditableData(prev => ({ ...prev, [field]: value }))
+        if (!editableData) return
+
+        const updatedData = updateHRDataField(editableData, field, value)
+        setEditableData(updatedData)
+
+        // Clear validation error for this field when user makes changes
+        if (validationErrors[field]) {
+            const newErrors = { ...validationErrors }
+            delete newErrors[field]
+            setValidationErrors(newErrors)
+        }
     }
 
     const handleSaveChanges = () => {
-        onDataChange(editableData)
+        if (!editableData) return
+
+        // Create new response object with updated data
+        const updatedResponse: ProcessResponse = {
+            hr_data: editableData,
+            errors: validationErrors
+        }
+
+        onDataChange(updatedResponse)
         setIsEditing(false)
     }
 
@@ -114,15 +182,30 @@ export default function ResultDisplay({ data, onDataChange }: ResultDisplayProps
     }
 
     const basicFields = [
-        { label: 'Nome', field: 'name' as keyof HRData, type: 'text' },
-        { label: 'CPF', field: 'cpf' as keyof HRData, type: 'text' },
-        { label: 'Data', field: 'date' as keyof HRData, type: 'datetime-local' },
-        { label: 'Cargo', field: 'position' as keyof HRData, type: 'text' },
-        { label: 'Departamento', field: 'department' as keyof HRData, type: 'text' },
-        { label: 'Salário', field: 'salary' as keyof HRData, type: 'number' },
-        { label: 'Tipo de Contrato', field: 'contract_type' as keyof HRData, type: 'text' },
-        { label: 'Data de Início', field: 'start_date' as keyof HRData, type: 'datetime-local' },
+        { label: 'Nome', field: 'name' as keyof HRData, type: 'text', required: true },
+        { label: 'CPF', field: 'cpf' as keyof HRData, type: 'text', required: true },
+        { label: 'Data', field: 'date' as keyof HRData, type: 'datetime-local', required: true },
+        { label: 'Cargo', field: 'position' as keyof HRData, type: 'text', required: false },
+        { label: 'Departamento', field: 'department' as keyof HRData, type: 'text', required: false },
+        { label: 'Salário', field: 'salary' as keyof HRData, type: 'number', required: false },
+        { label: 'Tipo de Contrato', field: 'contract_type' as keyof HRData, type: 'text', required: false },
+        { label: 'Data de Início', field: 'start_date' as keyof HRData, type: 'datetime-local', required: false },
     ]
+
+    if (!editableData) {
+        return <div>Carregando...</div>
+    }
+
+    const renderFieldValue = (field: keyof HRData) => {
+        const value = editableData[field]
+        if (value === null || value === undefined) {
+            return 'Não informado'
+        }
+        if (Array.isArray(value)) {
+            return value.join(', ')
+        }
+        return value.toString()
+    }
 
     return (
         <div className="bg-white rounded-lg shadow-lg p-6 animate-fade-in space-y-8 w-full">
@@ -140,22 +223,35 @@ export default function ResultDisplay({ data, onDataChange }: ResultDisplayProps
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {basicFields.map(({ label, field, type }) => (
+                {basicFields.map(({ label, field, type, required }) => (
                     <div
                         key={field}
-                        className="bg-gray-50 rounded-lg p-4 border border-gray-100"
+                        className={`bg-gray-50 rounded-lg p-4 border ${validationErrors[field] ? 'border-red-300' : 'border-gray-100'
+                            }`}
                     >
-                        <p className="text-sm font-medium text-gray-500">{label}</p>
+                        <p className="text-sm font-medium text-gray-500">
+                            {label}
+                            {required && <span className="text-red-500 ml-1">*</span>}
+                        </p>
                         {isEditing ? (
-                            <input
-                                type={type}
-                                value={editableData[field] || ''}
-                                onChange={(e) => handleInputChange(field, e.target.value)}
-                                className="mt-1 w-full p-2 border rounded-md focus:ring-2 focus:ring-indigo-500"
-                            />
+                            <div>
+                                <input
+                                    type={type}
+                                    value={editableData[field]?.toString() || ''}
+                                    onChange={(e) => handleInputChange(field, e.target.value)}
+                                    className={`mt-1 w-full p-2 border rounded-md focus:ring-2 focus:ring-indigo-500 ${validationErrors[field] ? 'border-red-300' : ''
+                                        }`}
+                                    required={required}
+                                />
+                                {validationErrors[field] && (
+                                    <p className="mt-1 text-sm text-red-600">
+                                        {validationErrors[field].join(', ')}
+                                    </p>
+                                )}
+                            </div>
                         ) : (
                             <p className="mt-1 text-lg text-gray-900">
-                                {editableData[field] || 'Não informado'}
+                                {renderFieldValue(field)}
                             </p>
                         )}
                     </div>
@@ -249,9 +345,18 @@ export default function ResultDisplay({ data, onDataChange }: ResultDisplayProps
             {/* Work Experience Section */}
             <div className="bg-purple-50 rounded-lg p-6 border border-purple-100">
                 <h3 className="text-xl font-semibold text-purple-900 mb-4">Experiência Profissional</h3>
+                {validationErrors['work_experience'] && (
+                    <p className="mb-4 text-sm text-red-600">
+                        {validationErrors['work_experience'].join(', ')}
+                    </p>
+                )}
 
-                {editableData.work_experience.map((exp, index) => (
-                    <div key={index} className="mb-6 p-4 bg-white rounded-lg shadow">
+                {editableData.work_experience?.map((exp, index) => (
+                    <div
+                        key={index}
+                        className={`mb-6 p-4 bg-white rounded-lg shadow ${validationErrors[`work_experience.${index}`] ? 'border border-red-300' : ''
+                            }`}
+                    >
                         <div className="flex justify-between items-start">
                             <div>
                                 <h4 className="text-lg font-medium">{exp.company}</h4>

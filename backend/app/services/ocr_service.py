@@ -1,7 +1,8 @@
 import pytesseract
-from pdf2image import convert_from_bytes
+from pdf2image.pdf2image import convert_from_bytes
 import re
 from datetime import datetime
+from typing import Dict, Any
 from ..models.hr_data import HRData
 
 class OCRService:
@@ -18,7 +19,16 @@ class OCRService:
         return text
 
     @staticmethod
-    def extract_hr_data(text: str) -> HRData:
+    def extract_hr_data(text: str) -> Dict[str, Any]:
+        """
+        Extract HR data from text and return as a dictionary.
+        
+        Args:
+            text: Text to extract data from
+            
+        Returns:
+            Dictionary containing extracted HR data
+        """
         # Extract name (assuming it follows 'Nome:' or similar pattern)
         name_match = re.search(r'Nome:?\s*([^\n]+)', text, re.IGNORECASE)
         name = name_match.group(1).strip() if name_match else ""
@@ -47,14 +57,17 @@ class OCRService:
         contract_match = re.search(r'Contrato:?\s*([^\n]+)', text, re.IGNORECASE)
         contract_type = contract_match.group(1).strip() if contract_match else None
 
-        # Create and return HRData object
-        return HRData(
-            name=name,
-            cpf=cpf,
-            date=date,
-            position=position,
-            department=department,
-            salary=salary,
-            contract_type=contract_type,
-            start_date=date
-        ) 
+        # Return dictionary instead of HRData object
+        return {
+            "name": name,
+            "cpf": cpf,
+            "date": date.isoformat(),
+            "position": position,
+            "department": department,
+            "salary": salary,
+            "contract_type": contract_type,
+            "start_date": date.isoformat(),
+            "main_skills": [],
+            "hard_skills": [],
+            "work_experience": []
+        } 

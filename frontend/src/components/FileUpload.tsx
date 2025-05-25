@@ -1,10 +1,19 @@
 import type { HRData } from '@/types/hr-data'
 import { useCallback, useState } from 'react'
 
+interface ValidationErrors {
+    [key: string]: string[]
+}
+
+interface ProcessResponse {
+    hr_data: HRData | null
+    errors: ValidationErrors
+}
+
 interface FileUploadProps {
-    onUploadSuccess: (data: HRData) => void
+    onUploadSuccess: (data: ProcessResponse) => void
     setLoading: (loading: boolean) => void
-    setCurrentData: (data: HRData) => void
+    setCurrentData: (data: ProcessResponse) => void
 }
 
 export default function FileUpload({ onUploadSuccess, setLoading, setCurrentData }: FileUploadProps) {
@@ -46,7 +55,16 @@ export default function FileUpload({ onUploadSuccess, setLoading, setCurrentData
                 throw new Error('Falha ao processar arquivo')
             }
 
-            const data = await response.json()
+            const data: ProcessResponse = await response.json()
+
+            // Check if there are any validation errors
+            if (Object.keys(data.errors).length > 0) {
+                const errorMessages = Object.entries(data.errors)
+                    .map(([field, errors]) => `${field}: ${errors.join(', ')}`)
+                    .join('; ')
+                setError(`Erros de validação: ${errorMessages}`)
+            }
+
             setCurrentData(data)
             onUploadSuccess(data)
         } catch (err) {
