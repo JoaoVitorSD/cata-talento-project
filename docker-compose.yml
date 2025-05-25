@@ -14,7 +14,7 @@ services:
     networks:
       - app-network
     environment:
-      - VITE_API_URL=http://localhost:15121/api/v1
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:15121/api/v1}
 
   backend:
     build:
