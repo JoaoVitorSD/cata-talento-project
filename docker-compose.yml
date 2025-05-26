@@ -10,7 +10,7 @@ services:
     ports:
       - "15120:80"
     depends_on:
-      - backend
+      - backend 
     networks:
       - app-network
     environment:
