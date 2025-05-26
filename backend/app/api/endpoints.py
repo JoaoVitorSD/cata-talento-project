@@ -81,7 +81,7 @@ async def process_pdf(file: UploadFile):
         # Return both HR data and any validation errors
         if isinstance(validated_hr_data, dict) and "errors" in validated_hr_data:
             return {
-                "hr_data": None,
+                "hr_data": ai_extracted_data,
                 "errors": validated_hr_data["errors"]
             }
         else:
