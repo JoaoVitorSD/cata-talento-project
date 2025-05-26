@@ -82,7 +82,7 @@ async def catch_exceptions_middleware(request: Request, call_next):
         )
 
 # Include the router
-app.include_router(router, prefix="/api/v1")
+app.include_router(router, prefix="/v1")
 
 @app.get("/health")
 async def health_check():
