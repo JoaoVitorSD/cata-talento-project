@@ -40,5 +40,11 @@ This will generate information about line coverage and store it in the ".coverag
 ```bash
 coverage html
 ```
-
 This command creates a report in html format, which will be stored in the "htmlcov" folder, which can be accessed through the link displayed in the standard output.
+
+4. Generating the text report of line coverage:
+
+```bash
+coverage report -m
+```
+This command creates a report in text format on standard output.
