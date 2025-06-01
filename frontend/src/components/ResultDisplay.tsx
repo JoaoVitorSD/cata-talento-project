@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react'
-import type { HRData, WorkExperience } from '../types/hr-data'
+import { useEffect, useState } from 'react';
+import type { HRData, WorkExperience } from '../types/hr-data';
 
-interface ValidationErrors {
-    [key: string]: string[]
+interface ValidationError {
+    field: string;
+    error: string;
 }
 
 interface ProcessResponse {
     hr_data: HRData | null
-    errors: ValidationErrors
+    errors: ValidationError[]
 }
 
 interface ResultDisplayProps {
@@ -65,7 +66,7 @@ const getFieldLabel = (field: string): string => {
 export default function ResultDisplay({ data, onDataChange }: ResultDisplayProps) {
     const [isEditing, setIsEditing] = useState(false)
     const [editableData, setEditableData] = useState<HRData | null>(data.hr_data ?? null)
-    const [validationErrors, setValidationErrors] = useState<ValidationErrors>(data.errors ?? {})
+    const [validationErrors, setValidationErrors] = useState<ValidationError[]>(Array.isArray(data.errors) ? data.errors : [])
     const [newSkill, setNewSkill] = useState({ main: '', hard: '' })
     const [newExperience, setNewExperience] = useState<WorkExperience>({
         company: '',
@@ -88,30 +89,35 @@ export default function ResultDisplay({ data, onDataChange }: ResultDisplayProps
                 .then(templateData => {
                     const response: ProcessResponse = {
                         hr_data: createHRData(templateData),
-                        errors: {}
+                        errors: []
                     }
                     setEditableData(response.hr_data)
+                    setValidationErrors([])
                     onDataChange(response)
                 })
                 .catch(error => console.error('Error fetching template:', error))
         } else if (data.hr_data) {
             setEditableData(createHRData(data.hr_data))
-            setValidationErrors(data.errors)
+            setValidationErrors(Array.isArray(data.errors) ? data.errors : [])
         }
     }, [data, onDataChange])
 
+    // Add this helper function to get errors for a specific field
+    const getFieldErrors = (field: string): string[] => {
+        return validationErrors
+            .filter(error => error.field === field)
+            .map(error => error.error);
+    }
+
+    // Update handleInputChange to clear errors for the field being edited
     const handleInputChange = (field: keyof HRData, value: any) => {
         if (!editableData) return
 
         const updatedData = updateHRDataField(editableData, field, value)
         setEditableData(updatedData)
 
-        // Clear validation error for this field when user makes changes
-        if (validationErrors[field]) {
-            const newErrors = { ...validationErrors }
-            delete newErrors[field]
-            setValidationErrors(newErrors)
-        }
+        // Clear validation errors for this field when user makes changes
+        setValidationErrors(prev => prev.filter(error => error.field !== field))
     }
 
     const handleSaveChanges = () => {
@@ -184,7 +190,7 @@ export default function ResultDisplay({ data, onDataChange }: ResultDisplayProps
         })
     }
 
-    
+
 
     const basicFields = [
         { label: 'Nome', field: 'name' as keyof HRData, type: 'text', required: true },
@@ -225,41 +231,44 @@ export default function ResultDisplay({ data, onDataChange }: ResultDisplayProps
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {basicFields.map(({ label, field, type, required }) => (
-                    <div
-                        key={field}
-                        className={`bg-gray-50 rounded-lg p-4 border ${validationErrors[field] ? 'border-red-300' : 'border-gray-100'}`}
-                    >
-                        <p className="text-sm font-medium text-gray-500">
-                            {label}
-                            {required && <span className="text-red-500 ml-1">*</span>}
-                        </p>
-                        {isEditing ? (
-                            <div>
-                                <input
-                                    type={type}
-                                    value={editableData[field]?.toString() || ''}
-                                    onChange={(e) => handleInputChange(field, e.target.value)}
-                                    className={`mt-1 w-full p-2 border rounded-md focus:ring-2 focus:ring-indigo-500 ${validationErrors[field] ? 'border-red-300' : ''}`}
-                                    required={required}
-                                />
-                                {validationErrors[field] && (
-                                    <div className="mt-1 space-y-1">
-                                        {validationErrors[field].map((error, index) => (
-                                            <p key={index} className="text-sm text-red-600">
-                                                <span className="font-medium">{getFieldLabel(field)}:</span> {error}
-                                            </p>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            <p className="mt-1 text-lg text-gray-900">
-                                {renderFieldValue(field)}
+                {basicFields.map(({ label, field, type, required }) => {
+                    const fieldErrors = getFieldErrors(field);
+                    return (
+                        <div
+                            key={field}
+                            className={`bg-gray-50 rounded-lg p-4 border ${fieldErrors.length > 0 ? 'border-red-300' : 'border-gray-100'}`}
+                        >
+                            <p className="text-sm font-medium text-gray-500">
+                                {label}
+                                {required && <span className="text-red-500 ml-1">*</span>}
                             </p>
-                        )}
-                    </div>
-                ))}
+                            {isEditing ? (
+                                <div>
+                                    <input
+                                        type={type}
+                                        value={editableData[field]?.toString() || ''}
+                                        onChange={(e) => handleInputChange(field, e.target.value)}
+                                        className={`mt-1 w-full p-2 border rounded-md focus:ring-2 focus:ring-indigo-500 ${fieldErrors.length > 0 ? 'border-red-300' : ''}`}
+                                        required={required}
+                                    />
+                                    {fieldErrors.length > 0 && (
+                                        <div className="mt-1 space-y-1">
+                                            {fieldErrors.map((error, index) => (
+                                                <p key={index} className="text-sm text-red-600">
+                                                    {error}
+                                                </p>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <p className="mt-1 text-lg text-gray-900">
+                                    {renderFieldValue(field)}
+                                </p>
+                            )}
+                        </div>
+                    );
+                })}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -349,84 +358,89 @@ export default function ResultDisplay({ data, onDataChange }: ResultDisplayProps
             {/* Work Experience Section */}
             <div className="bg-purple-50 rounded-lg p-6 border border-purple-100">
                 <h3 className="text-xl font-semibold text-purple-900 mb-4">Experiência Profissional</h3>
-                {validationErrors['work_experience'] && (
+                {validationErrors.filter(error => error.field === 'work_experience').length > 0 && (
                     <div className="mb-4 space-y-1">
-                        {validationErrors['work_experience'].map((error, index) => (
+                        {validationErrors.filter(error => error.field === 'work_experience').map((error, index) => (
                             <p key={index} className="text-sm text-red-600">
-                                <span className="font-medium">{getFieldLabel('work_experience')}:</span> {error}
+                                <span className="font-medium">{getFieldLabel('work_experience')}:</span> {error.error}
                             </p>
                         ))}
                     </div>
                 )}
 
-                {editableData.work_experience?.map((exp, index) => (
-                    <div
-                        key={index}
-                        className={`mb-6 p-4 bg-white rounded-lg shadow ${validationErrors[`work_experience.${index}`] ? 'border border-red-300' : ''
-                            }`}
-                    >
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <h4 className="text-lg font-medium">{exp.company}</h4>
-                                <p className="text-gray-600">{exp.position}</p>
+                {editableData.work_experience?.map((exp, index) => {
+                    const experienceErrors = validationErrors.filter(error =>
+                        error.field.startsWith(`work_experience.${index}`)
+                    );
+
+                    return (
+                        <div
+                            key={index}
+                            className={`mb-6 p-4 bg-white rounded-lg shadow ${experienceErrors.length > 0 ? 'border border-red-300' : ''}`}
+                        >
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <h4 className="text-lg font-medium">{exp.company}</h4>
+                                    <p className="text-gray-600">{exp.position}</p>
+                                </div>
+                                {isEditing && (
+                                    <button
+                                        onClick={() => removeWorkExperience(index)}
+                                        className="text-red-600 hover:text-red-800"
+                                    >
+                                        Remover
+                                    </button>
+                                )}
                             </div>
-                            {isEditing && (
-                                <button
-                                    onClick={() => removeWorkExperience(index)}
-                                    className="text-red-600 hover:text-red-800"
-                                >
-                                    Remover
-                                </button>
+
+                            <div className="mt-2 grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-sm text-gray-500">Data de Início</p>
+                                    <p>{new Date(exp.start_date).toLocaleDateString()}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-500">Data de Término</p>
+                                    <p>{exp.current_job ? 'Atual' : exp.end_date ? new Date(exp.end_date).toLocaleDateString() : 'Não informado'}</p>
+                                </div>
+                            </div>
+
+                            <div className="mt-4">
+                                <p className="text-sm text-gray-500">Descrição</p>
+                                <p className="mt-1">{exp.description}</p>
+                            </div>
+
+                            <div className="mt-4">
+                                <p className="text-sm text-gray-500">Conquistas</p>
+                                <ul className="list-disc list-inside mt-1">
+                                    {exp.achievements?.map((achievement, i) => (
+                                        <li key={i}>{achievement}</li>
+                                    ))}
+                                </ul>
+                            </div>
+
+                            <div className="mt-4">
+                                <p className="text-sm text-gray-500">Tecnologias Utilizadas</p>
+                                <div className="flex flex-wrap gap-2 mt-1">
+                                    {exp.technologies_used.map((tech, i) => (
+                                        <span key={i} className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">
+                                            {tech}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {experienceErrors.length > 0 && (
+                                <div className="mt-2 space-y-1">
+                                    {experienceErrors.map((error, i) => (
+                                        <p key={i} className="text-sm text-red-600">
+                                            {error.error}
+                                        </p>
+                                    ))}
+                                </div>
                             )}
                         </div>
-
-                        <div className="mt-2 grid grid-cols-2 gap-4">
-                            <div>
-                                <p className="text-sm text-gray-500">Data de Início</p>
-                                <p>{new Date(exp.start_date).toLocaleDateString()}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-500">Data de Término</p>
-                                <p>{exp.current_job ? 'Atual' : exp.end_date ? new Date(exp.end_date).toLocaleDateString() : 'Não informado'}</p>
-                            </div>
-                        </div>
-
-                        <div className="mt-4">
-                            <p className="text-sm text-gray-500">Descrição</p>
-                            <p className="mt-1">{exp.description}</p>
-                        </div>
-
-                        <div className="mt-4">
-                            <p className="text-sm text-gray-500">Conquistas</p>
-                            <ul className="list-disc list-inside mt-1">
-                                {exp.achievements?.map((achievement, i) => (
-                                    <li key={i}>{achievement}</li>
-                                ))}
-                            </ul>
-                        </div>
-
-                        <div className="mt-4">
-                            <p className="text-sm text-gray-500">Tecnologias Utilizadas</p>
-                            <div className="flex flex-wrap gap-2 mt-1">
-                                {exp.technologies_used.map((tech, i) => (
-                                    <span key={i} className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">
-                                        {tech}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-
-                        {validationErrors[`work_experience.${index}`] && (
-                            <div className="mt-2 space-y-1">
-                                {validationErrors[`work_experience.${index}`]?.map((error, i) => (
-                                    <p key={i} className="text-sm text-red-600">
-                                        <span className="font-medium">Experiência {index + 1}:</span> {error}
-                                    </p>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                ))}
+                    );
+                })}
 
                 {isEditing && (
                     <div className="mt-4 p-4 bg-white rounded-lg shadow">

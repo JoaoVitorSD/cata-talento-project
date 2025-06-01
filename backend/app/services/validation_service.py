@@ -70,6 +70,7 @@ class ValidationService:
     def _parse_datetime(self, date_string: str) -> datetime:
         """
         Parse datetime string, handling different formats.
+        If only year is provided, defaults to January 1st of that year.
         
         Args:
             date_string: String representation of datetime
@@ -82,7 +83,16 @@ class ValidationService:
             if date_string.endswith('Z'):
                 date_string = date_string.replace('Z', '+00:00')
             
-            return datetime.fromisoformat(date_string)
+            # Try parsing as ISO format first
+            try:
+                return datetime.fromisoformat(date_string)
+            except ValueError:
+                # If ISO format fails, check if it's just a year
+                if date_string.isdigit() and len(date_string) == 4:
+                    # Convert year to January 1st of that year
+                    return datetime(int(date_string), 1, 1)
+                raise ValueError(f"Invalid date format: {date_string}")
+                
         except ValueError as e:
             logging.error(f"Failed to parse datetime string '{date_string}': {str(e)}")
             raise ValueError(f"Invalid date format: {date_string}")
