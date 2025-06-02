@@ -8,3 +8,5 @@ pydantic==2.4.2
 pymongo==4.5.0
 python-dotenv==1.0.0
 anthropic>=0.18.1  # For Claude API support 
+pytest>=8.3.5
+coverage>=7.8.2
