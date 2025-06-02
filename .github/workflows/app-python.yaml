@@ -32,7 +32,7 @@ jobs:
 
     - name: Test with pytest
       env: 
-        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        ANTHROPIC_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
         
       run: |
         coverage run -m pytest
