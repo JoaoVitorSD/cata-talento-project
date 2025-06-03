@@ -1,14 +1,15 @@
 import pytest
+
 from testcontainers.mongodb import MongoDbContainer
 
-from ..core.config import settings
-from ..core.dependencies import ServiceContainer
+from app.core.config import settings
+from app.core.dependencies import ServiceContainer, get_mongodb_service
 
 
 @pytest.fixture(scope="session")
 def mongodb_container():
     """Create a MongoDB container for testing."""
-    container = MongoDbContainer("mongo:6.0")
+    container = MongoDbContainer("mongo:latest")
     container.start()
     
     # Override the MongoDB connection string for testing

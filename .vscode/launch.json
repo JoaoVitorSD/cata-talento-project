@@ -15,11 +15,11 @@
             "program": "${workspaceFolder}/backend/run.py",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "python": "${workspaceFolder}/backend/venv/bin/python",
+            "python": "${workspaceFolder}/.venv/bin/python",
             "cwd": "${workspaceFolder}/backend",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/backend",
-                "VIRTUAL_ENV": "${workspaceFolder}/backend/venv"
+                "VIRTUAL_ENV": "${workspaceFolder}/.venv"
             }
         },
         {
@@ -37,11 +37,11 @@
             ],
             "jinja": true,
             "justMyCode": false,
-            "python": "${workspaceFolder}/backend/venv/bin/python",
+            "python": "${workspaceFolder}/.venv/bin/python",
             "cwd": "${workspaceFolder}/backend",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/backend",
-                "VIRTUAL_ENV": "${workspaceFolder}/backend/venv"
+                "VIRTUAL_ENV": "${workspaceFolder}/.venv"
             }
         }
     ],

@@ -5,8 +5,8 @@ import logging
 import sys
 import traceback
 from datetime import datetime
-from .api.endpoints import router
-from .core.dependencies import initialize_services, shutdown_services
+from app.api.endpoints import router
+from app.core.dependencies import initialize_services, shutdown_services
 from dotenv import load_dotenv
 import os
 
