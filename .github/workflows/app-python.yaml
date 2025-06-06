@@ -40,6 +40,7 @@ jobs:
     - name: Report with coverage.py
       run: |
         coverage report -m > report.txt
+        coverage xml
 
     - name: Upload coverage test results
       uses: actions/upload-artifact@v4
@@ -47,3 +48,15 @@ jobs:
         name: pytest-coverage-results-${{ matrix.os }}-${{ github.run_id }}
         path: report.txt
       if: ${{ always() }}
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        directory: ./
+        env_vars: OS,PYTHON-VERSION
+        fail_ci_if_error: true
+        files: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        token: ${{ secrets.CODECOV_TOKEN }}
+        verbose: true
