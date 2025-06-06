@@ -88,7 +88,7 @@ class HRData(BaseModel):
         
         # For complete CPF (11 digits), perform full validation
         if len(cpf_digits) > 11:
-            raise ValueError('CPF não pode ter mais que 11 dígitos')
+            raise ValueError('CPF inválido: não pode ter mais que 11 dígitos')
             
         # Check if all digits are the same
         if len(set(cpf_digits)) == 1:

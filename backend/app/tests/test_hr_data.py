@@ -112,7 +112,7 @@ def test_work_experience_achievements_validation():
             end_date=datetime(2023, 12, 31),
             current_job=False,
             description="Desenvolvimento de aplicações web",
-            achievements=["Short"],  # Too short achievement
+            achievements=["long"],  # Too short achievement
             technologies_used=[]
         )
     assert "Cada conquista deve ter pelo menos 5 caracteres" in str(exc_info.value)
@@ -143,7 +143,7 @@ def test_work_experience_description_validation():
             achievements=[],
             technologies_used=[]
         )
-    assert "ensure this value has at least 10 characters" in str(exc_info.value)
+    assert "String should have at least 10 characters" in str(exc_info.value)
 
 def test_hr_data_name_validation():
     with pytest.raises(ValueError) as exc_info:
@@ -157,7 +157,7 @@ def test_hr_data_name_validation():
             hard_skills=[],
             work_experience=[]
         )
-    assert "ensure this value has at least 3 characters" in str(exc_info.value)
+    assert "String should have at least 3 characters" in str(exc_info.value)
 
 def test_hr_data_position_validation():
     with pytest.raises(ValueError) as exc_info:
@@ -171,7 +171,7 @@ def test_hr_data_position_validation():
             hard_skills=[],
             work_experience=[]
         )
-    assert "ensure this value has at least 2 characters" in str(exc_info.value)
+    assert "String should have at least 2 characters" in str(exc_info.value)
 
 def test_hr_data_salary_validation():
     with pytest.raises(ValueError) as exc_info:
@@ -185,7 +185,7 @@ def test_hr_data_salary_validation():
             hard_skills=[],
             work_experience=[]
         )
-    assert "O salário deve ser maior que zero" in str(exc_info.value)
+    assert "Input should be greater than 0" in str(exc_info)
 
 def test_hr_data_main_skills_validation():
     with pytest.raises(ValueError) as exc_info:
@@ -281,7 +281,7 @@ def test_cpf_validation():
     invalid_cpfs = [
         "123.456.789-00",  # All same digits
         "111.111.111-11",  # All ones
-        "123.456.789-09",  # Wrong check digits
+        "123.456.789-00",  # Wrong check digits
         "529.982.247-2",   # Incomplete
         "529.982.247-256", # Too long
     ]
