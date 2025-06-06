@@ -74,19 +74,11 @@ class HRData(BaseModel):
         # Remove any non-digit characters for validation
         cpf_digits = ''.join(filter(str.isdigit, cpf))
         
-        # Check if it's a partial CPF (allow partial input)
+        # check if it has fewer digits
         if len(cpf_digits) < 11:
-            # If it's a partial CPF, just format what we have
-            if len(cpf_digits) <= 3:
-                return cpf_digits
-            elif len(cpf_digits) <= 6:
-                return f'{cpf_digits[:3]}.{cpf_digits[3:]}'
-            elif len(cpf_digits) <= 9:
-                return f'{cpf_digits[:3]}.{cpf_digits[3:6]}.{cpf_digits[6:]}'
-            else:
-                return f'{cpf_digits[:3]}.{cpf_digits[3:6]}.{cpf_digits[6:9]}-{cpf_digits[9:]}'
+            raise ValueError('CPF inválido: não pode ter menos que 11 dígitos')
         
-        # For complete CPF (11 digits), perform full validation
+        # check if there are more digits
         if len(cpf_digits) > 11:
             raise ValueError('CPF inválido: não pode ter mais que 11 dígitos')
             
