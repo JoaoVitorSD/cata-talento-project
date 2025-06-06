@@ -52,6 +52,18 @@ class WorkExperience(BaseModel):
                 if len(tech.strip()) < 2:
                     raise ValueError('Cada tecnologia deve ter pelo menos 2 caracteres')
         return technologies
+    
+    def update_work_experience(self, work_experience):
+        self.company = work_experience.company
+        self.position = work_experience.position
+        self.start_date = work_experience.start_date
+        self.end_date = work_experience.end_date
+        self.current_job = work_experience.current_job
+        self.description = work_experience.description
+        self.achievements = work_experience.achievements
+        self.technologies_used = work_experience.technologies_used
+        
+        return self
 
     class Config:
         error_msg_templates = {
@@ -122,7 +134,21 @@ class HRData(BaseModel):
                 if len(skill.strip()) < 2:
                     raise ValueError('Cada habilidade técnica deve ter pelo menos 2 caracteres')
         return skills
+    
+    def add_work_experience(self, work_experience: WorkExperience):
+        self.work_experience.append(work_experience)
+        return self
 
+    def remove_work_experience(self, work_experience: WorkExperience):
+        self.work_experience.remove(work_experience)
+        return self
+    
+    def update_work_experience(self, work_experience: WorkExperience):
+        for exp in self.work_experience:
+            if exp.company == work_experience.company and exp.position == work_experience.position:
+                exp.update_work_experience(work_experience)
+                return self
+        return self
     class Config:
         error_msg_templates = {
             'value_error.any_str.min_length': 'O nome deve ter pelo menos {limit_value} caracteres',

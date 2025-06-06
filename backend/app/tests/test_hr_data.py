@@ -354,3 +354,84 @@ def test_optional_fields():
     assert exp.end_date is None
     assert exp.achievements == []
     assert exp.technologies_used == [] 
+
+def test_add_work_experience(valid_hr_data, valid_work_experience):
+    # Test adding a work experience
+    result = valid_hr_data.add_work_experience(valid_work_experience)
+    
+    # Verify the work experience was added
+    assert len(valid_hr_data.work_experience) == 1
+    assert valid_hr_data.work_experience[0] == valid_work_experience
+    
+    # Verify method chaining
+    assert result is valid_hr_data
+
+def test_remove_work_experience(valid_hr_data, valid_work_experience):
+    # First add a work experience
+    valid_hr_data.add_work_experience(valid_work_experience)
+    assert len(valid_hr_data.work_experience) == 1
+    
+    # Test removing the work experience
+    result = valid_hr_data.remove_work_experience(valid_work_experience)
+    
+    # Verify the work experience was removed
+    assert len(valid_hr_data.work_experience) == 0
+    
+    # Verify method chaining
+    assert result is valid_hr_data
+    
+    # Test removing non-existent work experience
+    with pytest.raises(ValueError) as exc_info:
+       valid_hr_data.remove_work_experience(valid_work_experience)
+    assert "list.remove(x): x not in list" in str(exc_info.value)
+    
+
+def test_update_work_experience(valid_hr_data, valid_work_experience):
+    # First add a work experience
+    valid_hr_data.add_work_experience(valid_work_experience)
+    
+    # Create an updated version of the work experience
+    updated_experience = WorkExperience(
+        company=valid_work_experience.company,
+        position=valid_work_experience.position,
+        start_date=datetime(2023, 1, 1),  # Different start date
+        end_date=datetime(2024, 12, 31),  # Different end date
+        current_job=False,
+        description="Updated description",
+        achievements=["New achievement"],
+        technologies_used=["New Technology"]
+    )
+    
+    # Test updating the work experience
+    result = valid_hr_data.update_work_experience(updated_experience)
+    
+    # Verify the work experience was updated
+    assert len(valid_hr_data.work_experience) == 1
+    updated_exp = valid_hr_data.work_experience[0]
+    assert updated_exp.start_date == updated_experience.start_date
+    assert updated_exp.end_date == updated_experience.end_date
+    assert updated_exp.description == updated_experience.description
+    assert updated_exp.achievements == updated_experience.achievements
+    assert updated_exp.technologies_used == updated_experience.technologies_used
+    
+    # Verify method chaining
+    assert result is valid_hr_data
+    
+    # Test updating non-existent work experience
+    non_existent_exp = WorkExperience(
+        company="Non Existent Corp",
+        position="Developer",
+        start_date=datetime(2022, 1, 1),
+        end_date=datetime(2023, 12, 31),
+        current_job=False,
+        description="Some description",
+        achievements=[],
+        technologies_used=[]
+    )
+    
+    result = valid_hr_data.update_work_experience(non_existent_exp)
+    assert len(valid_hr_data.work_experience) == 1  # Should not add new experience
+    assert result is valid_hr_data
+
+
+
