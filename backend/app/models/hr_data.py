@@ -1,7 +1,9 @@
-from pydantic import BaseModel, validator, Field
-from typing import Optional, List
-from datetime import datetime
 import re
+from datetime import datetime
+from typing import List, Optional
+
+from pydantic import BaseModel, Field, validator
+
 
 class WorkExperience(BaseModel):
     company: str = Field(..., min_length=1, description="Nome da empresa")
@@ -13,6 +15,12 @@ class WorkExperience(BaseModel):
     achievements: List[str] = Field(default=[], description="Lista de conquistas")
     technologies_used: List[str] = Field(default=[], description="Tecnologias utilizadas")
 
+    @validator('current_job')
+    def validate_current_job(cls, current_job, values):
+        if current_job and 'end_date' in values and values['end_date'] is not None:
+            raise ValueError('Não é possível definir data de término para emprego atual')
+        return current_job
+
     @validator('end_date')
     def validate_end_date(cls, end_date, values):
         if end_date and 'start_date' in values:
@@ -21,10 +29,6 @@ class WorkExperience(BaseModel):
             
             if end_date > datetime.now():
                 raise ValueError('A data de término não pode ser no futuro')
-        
-        if 'current_job' in values and values['current_job'] and end_date:
-            raise ValueError('Não é possível definir data de término para emprego atual')
-            
         return end_date
 
     @validator('start_date')
@@ -48,6 +52,12 @@ class WorkExperience(BaseModel):
                 if len(tech.strip()) < 2:
                     raise ValueError('Cada tecnologia deve ter pelo menos 2 caracteres')
         return technologies
+
+    class Config:
+        error_msg_templates = {
+            'value_error.any_str.min_length': 'A descrição deve ter pelo menos {limit_value} caracteres',
+            'value_error.any_str.min_length.position': 'O cargo deve ter pelo menos {limit_value} caracteres',
+        }
 
 class HRData(BaseModel):
     name: str = Field(..., min_length=3, description="Nome completo")
@@ -82,19 +92,19 @@ class HRData(BaseModel):
             
         # Check if all digits are the same
         if len(set(cpf_digits)) == 1:
-            raise ValueError('CPF inválido')
+            raise ValueError('CPF inválido: todos os dígitos são iguais')
             
         # Validate first digit
         sum_products = sum(int(a) * b for a, b in zip(cpf_digits[0:9], range(10, 1, -1)))
         expected_digit = (sum_products * 10 % 11) % 10
         if int(cpf_digits[9]) != expected_digit:
-            raise ValueError('CPF inválido')
+            raise ValueError('CPF inválido: primeiro dígito verificador incorreto')
             
         # Validate second digit
         sum_products = sum(int(a) * b for a, b in zip(cpf_digits[0:10], range(11, 1, -1)))
         expected_digit = (sum_products * 10 % 11) % 10
         if int(cpf_digits[10]) != expected_digit:
-            raise ValueError('CPF inválido')
+            raise ValueError('CPF inválido: segundo dígito verificador incorreto')
             
         # Format CPF to standard format
         return f'{cpf_digits[:3]}.{cpf_digits[3:6]}.{cpf_digits[6:9]}-{cpf_digits[9:]}'
@@ -122,6 +132,12 @@ class HRData(BaseModel):
         return skills
 
     class Config:
+        error_msg_templates = {
+            'value_error.any_str.min_length': 'O nome deve ter pelo menos {limit_value} caracteres',
+            'value_error.number.gt': 'O salário deve ser maior que zero',
+            'value_error.any_str.min_length.position': 'O cargo deve ter pelo menos {limit_value} caracteres',
+        }
+
         json_schema_extra = {
             "example": {
                 "name": "John Doe",

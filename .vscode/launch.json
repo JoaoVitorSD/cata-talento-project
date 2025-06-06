@@ -9,6 +9,21 @@
             "cwd": "${workspaceFolder}/frontend"
         },
         {
+            "command": "pytest",
+            "name": "Run pytest",
+            "request": "launch",
+            "type": "node-terminal",
+            "cwd": "${workspaceFolder}/backend"
+        },
+        {
+            "command": "pytest ${file} -v",
+            "name": "Debug Current Test File",
+            "request": "launch",
+            "type": "node-terminal",
+            "cwd": "${workspaceFolder}/backend",
+            "console": "integratedTerminal"
+        },
+        {
             "name": "FastAPI: Run Server",
             "type": "python",
             "request": "launch",
