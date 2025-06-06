@@ -9,9 +9,50 @@ from ..models.hr_data import HRData, WorkExperience
 class HRService:
     def __init__(self, hr_data: HRData):
         self.hr_data = hr_data
+        if not self._is_valid_cpf(hr_data.cpf):
+            raise HTTPException(
+                status_code=400,
+                detail="CPF inválido. Todas as operações requerem um CPF válido."
+            )
+
+    def _is_valid_cpf(self, cpf: str) -> bool:
+        """Validate if the CPF is valid according to Brazilian rules."""
+        # Remove any non-digit characters
+        cpf_digits = ''.join(filter(str.isdigit, cpf))
+        
+        # Check if it's a complete CPF (11 digits)
+        if len(cpf_digits) != 11:
+            return False
+            
+        # Check if all digits are the same
+        if len(set(cpf_digits)) == 1:
+            return False
+            
+        # Validate first digit
+        sum_products = sum(int(a) * b for a, b in zip(cpf_digits[0:9], range(10, 1, -1)))
+        expected_digit = (sum_products * 10 % 11) % 10
+        if int(cpf_digits[9]) != expected_digit:
+            return False
+            
+        # Validate second digit
+        sum_products = sum(int(a) * b for a, b in zip(cpf_digits[0:10], range(11, 1, -1)))
+        expected_digit = (sum_products * 10 % 11) % 10
+        if int(cpf_digits[10]) != expected_digit:
+            return False
+            
+        return True
+
+    def _validate_cpf(self) -> None:
+        """Validate CPF before any operation."""
+        if not self._is_valid_cpf(self.hr_data.cpf):
+            raise HTTPException(
+                status_code=400,
+                detail="CPF inválido. Todas as operações requerem um CPF válido."
+            )
 
     def add_work_experience(self, experience: WorkExperience) -> None:
         """Add a new work experience to the HR data."""
+        self._validate_cpf()
         # Validate if dates overlap with existing experiences
         for existing_exp in self.hr_data.work_experience:
             if self._dates_overlap(existing_exp, experience):
@@ -24,6 +65,7 @@ class HRService:
 
     def update_work_experience(self, index: int, experience: WorkExperience) -> None:
         """Update an existing work experience at the specified index."""
+        self._validate_cpf()
         if not 0 <= index < len(self.hr_data.work_experience):
             raise HTTPException(
                 status_code=404,
@@ -42,6 +84,7 @@ class HRService:
 
     def remove_work_experience(self, index: int) -> None:
         """Remove a work experience at the specified index."""
+        self._validate_cpf()
         if not 0 <= index < len(self.hr_data.work_experience):
             raise HTTPException(
                 status_code=404,
@@ -52,6 +95,7 @@ class HRService:
 
     def add_skill(self, skill: str, skill_type: str = "hard") -> None:
         """Add a new skill to either hard_skills or main_skills."""
+        self._validate_cpf()
         if skill_type not in ["hard", "main"]:
             raise HTTPException(
                 status_code=400,
@@ -83,6 +127,7 @@ class HRService:
 
     def remove_skill(self, skill: str, skill_type: str = "hard") -> None:
         """Remove a skill from either hard_skills or main_skills."""
+        self._validate_cpf()
         if skill_type not in ["hard", "main"]:
             raise HTTPException(
                 status_code=400,
@@ -100,6 +145,7 @@ class HRService:
 
     def calculate_total_experience(self) -> timedelta:
         """Calculate total work experience time."""
+        self._validate_cpf()
         total_time = timedelta()
         
         for exp in self.hr_data.work_experience:
