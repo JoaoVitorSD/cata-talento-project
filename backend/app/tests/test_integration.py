@@ -1,12 +1,7 @@
 import io
-import json
-from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
-from app.core.dependencies import initialize_services, shutdown_services
-from app.main import app
-from app.models.hr_data import HRData, WorkExperience
 
 # Try to import with better error handling
 try:
