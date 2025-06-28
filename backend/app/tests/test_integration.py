@@ -6,22 +6,16 @@ import pytest
 # Try to import with better error handling and explicit imports
 try:
     import fastapi
-    from fastapi.testclient import TestClient as FastAPITestClient
+    from fastapi.testclient import TestClient
     print(f"FastAPI version: {fastapi.__version__}")
+    print("Using FastAPI TestClient")
 except ImportError as e:
-    pytest.fail(f"Failed to import TestClient: {e}. Please check FastAPI installation.")
-
-# Alternative import for different FastAPI versions
-try:
-    from starlette.testclient import TestClient as StarletteTestClient
-    TestClient = StarletteTestClient
-    print("Using Starlette TestClient")
-except ImportError:
+    # Try Starlette as fallback
     try:
-        TestClient = FastAPITestClient
-        print("Using FastAPI TestClient")
-    except:
-        pytest.fail("Could not import any TestClient")
+        from starlette.testclient import TestClient
+        print("Using Starlette TestClient")
+    except ImportError:
+        pytest.fail(f"Failed to import TestClient: {e}. Please check FastAPI/Starlette installation.")
 
 try:
     from app.core.dependencies import initialize_services, shutdown_services
@@ -91,16 +85,30 @@ def setup_services(mock_external_services):
         # If shutdown fails, continue
         pass
 
-# Create test client fixture with proper error handling
-@pytest.fixture(scope="session")
-def client():
-    """Create test client for API testing"""
+# Function to create TestClient with proper error handling
+def create_test_client(app_instance):
+    """Create TestClient with proper error handling for different versions"""
     try:
-        # Create TestClient with proper parameters
-        test_client = TestClient(app)
-        return test_client
+        # Try the standard way first
+        return TestClient(app_instance)
+    except TypeError as e:
+        if "unexpected keyword argument 'app'" in str(e):
+            # Try with different constructor patterns
+            try:
+                # Some versions need base_url
+                return TestClient(app_instance, base_url="http://test")
+            except:
+                try:
+                    # Some versions need transport
+                    from fastapi.testclient import \
+                        TestClient as FallbackTestClient
+                    return FallbackTestClient(app_instance, base_url="http://test")
+                except:
+                    pytest.fail(f"Could not create TestClient: {e}")
+        else:
+            pytest.fail(f"TestClient creation failed: {e}")
     except Exception as e:
-        pytest.fail(f"Failed to create TestClient: {e}")
+        pytest.fail(f"Unexpected error creating TestClient: {e}")
 
 # Simple test to verify TestClient works
 def test_client_initialization():
