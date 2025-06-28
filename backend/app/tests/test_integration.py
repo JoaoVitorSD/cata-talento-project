@@ -7,7 +7,19 @@ import pytest
 from app.core.dependencies import initialize_services, shutdown_services
 from app.main import app
 from app.models.hr_data import HRData, WorkExperience
-from fastapi.testclient import TestClient
+
+# Try to import with better error handling
+try:
+    from fastapi.testclient import TestClient
+except ImportError as e:
+    pytest.fail(f"Failed to import TestClient: {e}. Please check FastAPI installation.")
+
+try:
+    from app.core.dependencies import initialize_services, shutdown_services
+    from app.main import app
+    from app.models.hr_data import HRData
+except ImportError as e:
+    pytest.fail(f"Failed to import app modules: {e}. Please check app structure and dependencies.")
 
 
 # Mock external services for testing
@@ -65,7 +77,18 @@ def setup_services(mock_external_services):
 @pytest.fixture(scope="session")
 def client():
     """Create test client for API testing"""
-    return TestClient(app)
+    try:
+        return TestClient(app)
+    except Exception as e:
+        pytest.fail(f"Failed to create TestClient: {e}")
+
+# Simple test to verify TestClient works
+def test_client_initialization(client):
+    """Test that TestClient can be initialized and make basic requests"""
+    assert client is not None
+    # Try a simple request to verify the client works
+    response = client.get("/health")
+    assert response.status_code in [200, 404, 500]  # Any response means client works
 
 # Test data fixtures
 @pytest.fixture
