@@ -1,15 +1,12 @@
-from fastapi import APIRouter, UploadFile, HTTPException
-from typing import Dict, cast, Union
 import logging
+from typing import Dict, Union, cast
 
+from fastapi import APIRouter, HTTPException, UploadFile
+
+from ..core.dependencies import (get_anthropic_service, get_mongodb_service,
+                                 get_ocr_service, get_template_service,
+                                 get_validation_service)
 from ..models.hr_data import HRData
-from ..core.dependencies import (
-    get_anthropic_service,
-    get_validation_service,
-    get_template_service,
-    get_mongodb_service,
-    get_ocr_service
-)
 
 router = APIRouter()
 
@@ -154,6 +151,18 @@ async def get_template():
     return template_service.get_default_template()
 
 
+@router.get("/template/roles", response_model=Dict)
+async def get_available_roles():
+    """
+    Get list of available role templates.
+    
+    Returns:
+        Dictionary containing list of available roles
+    """
+    template_service = get_template_service()
+    return {"roles": template_service.get_available_roles()}
+
+
 @router.get("/template/{role}", response_model=Dict)
 async def get_template_by_role(role: str):
     """
@@ -167,18 +176,6 @@ async def get_template_by_role(role: str):
     """
     template_service = get_template_service()
     return template_service.get_template_by_role(role)
-
-
-@router.get("/template/roles", response_model=Dict)
-async def get_available_roles():
-    """
-    Get list of available role templates.
-    
-    Returns:
-        Dictionary containing list of available roles
-    """
-    template_service = get_template_service()
-    return {"roles": template_service.get_available_roles()}
 
 
 @router.post("/validate", response_model=Dict)

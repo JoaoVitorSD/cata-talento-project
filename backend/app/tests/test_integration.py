@@ -5,10 +5,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from app.core.dependencies import initialize_services, shutdown_services
+from app.main import app
+from app.models.hr_data import HRData, WorkExperience
 from fastapi.testclient import TestClient
-
-from ..main import app
-from ..models.hr_data import HRData, WorkExperience
 
 
 # Mock external services for testing
@@ -30,6 +29,17 @@ def mock_external_services():
             "name": "João Silva",
             "position": "Developer"
         }
+        mock_anthropic_instance.generate_document_summary.return_value = {
+            "summary": "Test summary",
+            "key_points": ["Point 1", "Point 2"]
+        }
+        # Make the methods async
+        mock_anthropic_instance.analyze_hr_document = MagicMock()
+        mock_anthropic_instance.analyze_hr_document.return_value = {
+            "name": "João Silva",
+            "position": "Developer"
+        }
+        mock_anthropic_instance.generate_document_summary = MagicMock()
         mock_anthropic_instance.generate_document_summary.return_value = {
             "summary": "Test summary",
             "key_points": ["Point 1", "Point 2"]
@@ -95,6 +105,20 @@ def invalid_hr_data_dict():
     }
 
 @pytest.fixture
+def minimal_valid_hr_data_dict():
+    """Minimal valid HR data for testing"""
+    return {
+        "name": "João Silva",
+        "cpf": "529.982.247-25",
+        "position": "Developer",
+        "salary": 5000.00,
+        "contract_type": "CLT",
+        "main_skills": ["Leadership", "Communication"],
+        "hard_skills": ["Python", "React"],
+        "work_experience": []
+    }
+
+@pytest.fixture
 def mock_pdf_file():
     """Mock PDF file for testing"""
     return io.BytesIO(b"mock pdf content")
@@ -144,6 +168,10 @@ class TestTemplateEndpoints:
         assert "roles" in data
         assert isinstance(data["roles"], list)
         assert len(data["roles"]) > 0
+        # Check for expected roles
+        expected_roles = ["software_engineer", "data_scientist", "product_manager", "designer"]
+        for role in expected_roles:
+            assert role in data["roles"]
 
 class TestDataValidation:
     """Test 3: Data Validation Endpoint"""
@@ -154,8 +182,9 @@ class TestDataValidation:
         
         assert response.status_code == 200
         data = response.json()
-        assert "is_valid" in data
-        assert data["is_valid"] is True
+        assert "valid" in data
+        assert data["valid"] is True
+        assert "data" in data
         assert "errors" in data
     
     def test_validate_invalid_data(self, invalid_hr_data_dict):
@@ -164,17 +193,23 @@ class TestDataValidation:
         
         assert response.status_code == 200
         data = response.json()
-        assert "is_valid" in data
-        assert data["is_valid"] is False
+        assert "valid" in data
+        assert data["valid"] is False
         assert "errors" in data
         assert len(data["errors"]) > 0
 
 class TestDocumentStorage:
     """Test 4: Document Storage Endpoint"""
     
-    def test_store_valid_document(self, valid_hr_data_dict):
+    @patch('app.api.endpoints.get_mongodb_service')
+    def test_store_valid_document(self, mock_mongodb, minimal_valid_hr_data_dict):
         """Test storing valid HR data document"""
-        response = client.post("/v1/store-document", json=valid_hr_data_dict)
+        # Mock MongoDB service
+        mock_mongodb_instance = MagicMock()
+        mock_mongodb_instance.store_document.return_value = "test_document_id"
+        mock_mongodb.return_value = mock_mongodb_instance
+        
+        response = client.post("/v1/store-document", json=minimal_valid_hr_data_dict)
         
         assert response.status_code == 200
         data = response.json()
@@ -193,8 +228,29 @@ class TestDocumentStorage:
 class TestPDFProcessing:
     """Test 5: PDF Processing Endpoint"""
     
-    def test_process_valid_pdf(self):
+    @patch('app.api.endpoints.get_anthropic_service')
+    @patch('app.api.endpoints.get_validation_service')
+    def test_process_valid_pdf(self, mock_validation, mock_anthropic):
         """Test processing a valid PDF document"""
+        # Mock Anthropic service to return a coroutine
+        async def mock_analyze_hr_document(text):
+            return {"name": "João Silva", "position": "Developer"}
+        
+        mock_anthropic_instance = MagicMock()
+        mock_anthropic_instance.analyze_hr_document = mock_analyze_hr_document
+        mock_anthropic.return_value = mock_anthropic_instance
+        
+        # Mock validation service
+        mock_validation_instance = MagicMock()
+        mock_validation_instance.validate_hr_data.return_value = HRData(
+            name="João Silva",
+            cpf="529.982.247-25",
+            position="Developer",
+            salary=5000.00,
+            contract_type="CLT"
+        )
+        mock_validation.return_value = mock_validation_instance
+        
         # Create mock PDF file
         files = {"file": ("test.pdf", io.BytesIO(b"mock pdf content"), "application/pdf")}
         
@@ -219,8 +275,17 @@ class TestPDFProcessing:
 class TestPDFSummarization:
     """Test 6: PDF Summarization Endpoint"""
     
-    def test_summarize_pdf(self):
+    @patch('app.api.endpoints.get_anthropic_service')
+    def test_summarize_pdf(self, mock_anthropic):
         """Test PDF summarization functionality"""
+        # Mock Anthropic service to return a coroutine
+        async def mock_generate_document_summary(text):
+            return {"summary": "Test summary", "key_points": ["Point 1", "Point 2"]}
+        
+        mock_anthropic_instance = MagicMock()
+        mock_anthropic_instance.generate_document_summary = mock_generate_document_summary
+        mock_anthropic.return_value = mock_anthropic_instance
+        
         files = {"file": ("test.pdf", io.BytesIO(b"mock pdf content"), "application/pdf")}
         
         response = client.post("/v1/summarize-pdf", files=files)
@@ -249,26 +314,22 @@ class TestErrorHandling:
         
         assert response.status_code == 200  # Validation endpoint returns 200 with errors
         data = response.json()
-        assert "is_valid" in data
-        assert data["is_valid"] is False
+        assert "valid" in data
+        assert data["valid"] is False
 
 class TestDataFlow:
     """Test 8: Complete Data Flow"""
     
-    def test_complete_workflow(self):
+    def test_complete_workflow(self, minimal_valid_hr_data_dict):
         """Test complete workflow: validate -> store"""
         # Step 1: Validate data
-        valid_data = {
-            "name": "João Silva",
-            "cpf": "529.982.247-25",
-            "position": "Developer"
-        }
-        
-        validate_response = client.post("/v1/validate", json=valid_data)
+        validate_response = client.post("/v1/validate", json=minimal_valid_hr_data_dict)
         assert validate_response.status_code == 200
+        validate_data = validate_response.json()
+        assert validate_data["valid"] is True
         
         # Step 2: Store validated data
-        store_response = client.post("/v1/store-document", json=valid_data)
+        store_response = client.post("/v1/store-document", json=minimal_valid_hr_data_dict)
         assert store_response.status_code == 200
         
         data = store_response.json()
@@ -345,5 +406,5 @@ class TestAPIBehavior:
         response = client.post("/v1/validate", json={"invalid": "data"})
         assert response.status_code == 200  # Validation endpoint returns 200 with errors
         data = response.json()
-        assert "is_valid" in data
+        assert "valid" in data
         assert "errors" in data 
