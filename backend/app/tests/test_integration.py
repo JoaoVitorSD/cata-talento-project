@@ -114,7 +114,7 @@ def create_test_client(app_instance):
 def test_client_initialization():
     """Test that TestClient can be initialized and make basic requests"""
     try:
-        client = TestClient(app)
+        client = create_test_client(app)
         assert client is not None
         # Try a simple request to verify the client works
         response = client.get("/health")
