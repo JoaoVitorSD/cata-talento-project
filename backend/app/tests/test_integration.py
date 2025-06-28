@@ -3,11 +3,25 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-# Try to import with better error handling
+# Try to import with better error handling and explicit imports
 try:
-    from fastapi.testclient import TestClient
+    import fastapi
+    from fastapi.testclient import TestClient as FastAPITestClient
+    print(f"FastAPI version: {fastapi.__version__}")
 except ImportError as e:
     pytest.fail(f"Failed to import TestClient: {e}. Please check FastAPI installation.")
+
+# Alternative import for different FastAPI versions
+try:
+    from starlette.testclient import TestClient as StarletteTestClient
+    TestClient = StarletteTestClient
+    print("Using Starlette TestClient")
+except ImportError:
+    try:
+        TestClient = FastAPITestClient
+        print("Using FastAPI TestClient")
+    except:
+        pytest.fail("Could not import any TestClient")
 
 try:
     from app.core.dependencies import initialize_services, shutdown_services
@@ -15,6 +29,7 @@ try:
     from app.models.hr_data import HRData
 except ImportError as e:
     pytest.fail(f"Failed to import app modules: {e}. Please check app structure and dependencies.")
+
 
 
 # Mock external services for testing
