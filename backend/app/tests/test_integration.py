@@ -61,8 +61,11 @@ def setup_services(mock_external_services):
     yield
     shutdown_services()
 
-# Create test client
-client = TestClient(app)
+# Create test client fixture
+@pytest.fixture(scope="session")
+def client():
+    """Create test client for API testing"""
+    return TestClient(app)
 
 # Test data fixtures
 @pytest.fixture
@@ -126,7 +129,7 @@ def mock_pdf_file():
 class TestHealthCheck:
     """Test 1: Health Check Endpoint"""
     
-    def test_health_check(self):
+    def test_health_check(self, client):
         """Test that the health check endpoint returns healthy status"""
         response = client.get("/health")
         
@@ -139,7 +142,7 @@ class TestHealthCheck:
 class TestTemplateEndpoints:
     """Test 2: Template Endpoints"""
     
-    def test_get_default_template(self):
+    def test_get_default_template(self, client):
         """Test getting the default HR data template"""
         response = client.get("/v1/template")
         
@@ -150,7 +153,7 @@ class TestTemplateEndpoints:
         assert "position" in data
         assert "cpf" in data
     
-    def test_get_template_by_role(self):
+    def test_get_template_by_role(self, client):
         """Test getting a role-specific template"""
         response = client.get("/v1/template/developer")
         
@@ -159,7 +162,7 @@ class TestTemplateEndpoints:
         assert isinstance(data, dict)
         assert "position" in data
     
-    def test_get_available_roles(self):
+    def test_get_available_roles(self, client):
         """Test getting list of available role templates"""
         response = client.get("/v1/template/roles")
         
@@ -176,7 +179,7 @@ class TestTemplateEndpoints:
 class TestDataValidation:
     """Test 3: Data Validation Endpoint"""
     
-    def test_validate_valid_data(self, valid_hr_data_dict):
+    def test_validate_valid_data(self, client, valid_hr_data_dict):
         """Test validation of valid HR data"""
         response = client.post("/v1/validate", json=valid_hr_data_dict)
         
@@ -187,7 +190,7 @@ class TestDataValidation:
         assert "data" in data
         assert "errors" in data
     
-    def test_validate_invalid_data(self, invalid_hr_data_dict):
+    def test_validate_invalid_data(self, client, invalid_hr_data_dict):
         """Test validation of invalid HR data"""
         response = client.post("/v1/validate", json=invalid_hr_data_dict)
         
@@ -203,7 +206,7 @@ class TestDocumentStorage:
     
     @patch('app.api.endpoints.get_mongodb_service')
     @patch('app.api.endpoints.get_validation_service')
-    def test_store_valid_document(self, mock_validation, mock_mongodb, minimal_valid_hr_data_dict):
+    def test_store_valid_document(self, mock_validation, mock_mongodb, client, minimal_valid_hr_data_dict):
         """Test storing valid HR data document"""
         # Mock MongoDB service
         mock_mongodb_instance = MagicMock()
@@ -236,7 +239,7 @@ class TestDocumentStorage:
         assert "document_id" in data
         assert data["document_id"] == "test_document_id"
     
-    def test_store_invalid_document(self, invalid_hr_data_dict):
+    def test_store_invalid_document(self, client, invalid_hr_data_dict):
         """Test storing invalid HR data document"""
         response = client.post("/v1/store-document", json=invalid_hr_data_dict)
         
@@ -249,7 +252,7 @@ class TestPDFProcessing:
     
     @patch('app.api.endpoints.get_anthropic_service')
     @patch('app.api.endpoints.get_validation_service')
-    def test_process_valid_pdf(self, mock_validation, mock_anthropic):
+    def test_process_valid_pdf(self, mock_validation, mock_anthropic, client):
         """Test processing a valid PDF document"""
         # Mock Anthropic service to return a coroutine
         async def mock_analyze_hr_document(text):
@@ -280,7 +283,7 @@ class TestPDFProcessing:
         assert "hr_data" in data
         assert "errors" in data
     
-    def test_process_invalid_file_type(self):
+    def test_process_invalid_file_type(self, client):
         """Test processing with invalid file type"""
         files = {"file": ("test.txt", io.BytesIO(b"text content"), "text/plain")}
         
@@ -295,7 +298,7 @@ class TestPDFSummarization:
     """Test 6: PDF Summarization Endpoint"""
     
     @patch('app.api.endpoints.get_anthropic_service')
-    def test_summarize_pdf(self, mock_anthropic):
+    def test_summarize_pdf(self, mock_anthropic, client):
         """Test PDF summarization functionality"""
         # Mock Anthropic service to return a coroutine
         async def mock_generate_document_summary(text):
@@ -317,13 +320,13 @@ class TestPDFSummarization:
 class TestErrorHandling:
     """Test 7: Error Handling"""
     
-    def test_invalid_endpoint(self):
+    def test_invalid_endpoint(self, client):
         """Test handling of invalid endpoint"""
         response = client.get("/v1/nonexistent-endpoint")
         
         assert response.status_code == 404
     
-    def test_invalid_json_payload(self):
+    def test_invalid_json_payload(self, client):
         """Test handling of invalid JSON payload"""
         # Test with malformed JSON that will cause parsing error
         response = client.post(
@@ -341,35 +344,35 @@ class TestDataFlow:
     
     @patch('app.api.endpoints.get_mongodb_service')
     @patch('app.api.endpoints.get_validation_service')
-    def test_complete_workflow(self, mock_validation, mock_mongodb, minimal_valid_hr_data_dict):
+    def test_complete_workflow(self, mock_validation, mock_mongodb, client, minimal_valid_hr_data_dict):
         """Test complete workflow: validate -> store"""
         # Mock MongoDB service
         mock_mongodb_instance = MagicMock()
         mock_mongodb_instance.store_document.return_value = "test_document_id"
         mock_mongodb.return_value = mock_mongodb_instance
         
-        # Prepare HRData object
-        hr_data_obj = HRData(
-            name="João Silva",
-            cpf="529.982.247-25",
-            position="Developer",
-            salary=5000.00,
-            contract_type="CLT",
-            main_skills=["Leadership", "Communication"],
-            hard_skills=["Python", "React"],
-            work_experience=[]
-        )
-        
         # Mock validation service with different methods
         mock_validation_instance = MagicMock()
         # For validate_data_without_storing (used by /v1/validate)
         mock_validation_instance.validate_data_without_storing.return_value = {
             "valid": True,
-            "data": hr_data_obj,
+            "data": HRData(
+                name="João Silva",
+                cpf="529.982.247-25",
+                position="Developer",
+                salary=5000.00,
+                contract_type="CLT"
+            ),
             "errors": {}
         }
         # For validate_hr_data (used by /v1/store-document)
-        mock_validation_instance.validate_hr_data.return_value = hr_data_obj
+        mock_validation_instance.validate_hr_data.return_value = HRData(
+            name="João Silva",
+            cpf="529.982.247-25",
+            position="Developer",
+            salary=5000.00,
+            contract_type="CLT"
+        )
         mock_validation.return_value = mock_validation_instance
         
         # Step 1: Validate data
@@ -380,8 +383,6 @@ class TestDataFlow:
         
         # Step 2: Store validated data
         store_response = client.post("/v1/store-document", json=minimal_valid_hr_data_dict)
-        print(f"Status: {store_response.status_code}")
-        print(f"Response: {store_response.json()}")
         assert store_response.status_code == 200
         
         data = store_response.json()
@@ -391,7 +392,7 @@ class TestDataFlow:
 class TestConcurrentRequests:
     """Test 9: Concurrent Request Handling"""
     
-    def test_concurrent_health_checks(self):
+    def test_concurrent_health_checks(self, client):
         """Test handling of concurrent health check requests"""
         import threading
         import time
@@ -425,7 +426,7 @@ class TestConcurrentRequests:
 class TestAPIBehavior:
     """Test 10: API Behavior and Consistency"""
     
-    def test_api_response_format_consistency(self):
+    def test_api_response_format_consistency(self, client):
         """Test that API responses maintain consistent format"""
         # Test health endpoint
         health_response = client.get("/health")
@@ -446,7 +447,7 @@ class TestAPIBehavior:
         assert isinstance(roles_data, dict)
         assert "roles" in roles_data
     
-    def test_error_response_format(self):
+    def test_error_response_format(self, client):
         """Test that error responses maintain consistent format"""
         # Test 404 error
         response = client.get("/v1/nonexistent")
