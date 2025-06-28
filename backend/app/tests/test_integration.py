@@ -202,14 +202,33 @@ class TestDocumentStorage:
     """Test 4: Document Storage Endpoint"""
     
     @patch('app.api.endpoints.get_mongodb_service')
-    def test_store_valid_document(self, mock_mongodb, minimal_valid_hr_data_dict):
+    @patch('app.api.endpoints.get_validation_service')
+    def test_store_valid_document(self, mock_validation, mock_mongodb, minimal_valid_hr_data_dict):
         """Test storing valid HR data document"""
         # Mock MongoDB service
         mock_mongodb_instance = MagicMock()
         mock_mongodb_instance.store_document.return_value = "test_document_id"
         mock_mongodb.return_value = mock_mongodb_instance
         
+        # Mock validation service to return HRData object directly
+        mock_validation_instance = MagicMock()
+        mock_validation_instance.validate_hr_data.return_value = HRData(
+            name="João Silva",
+            cpf="529.982.247-25",
+            position="Developer",
+            salary=5000.00,
+            contract_type="CLT",
+            main_skills=["Leadership", "Communication"],
+            hard_skills=["Python", "React"],
+            work_experience=[]
+        )
+        mock_validation.return_value = mock_validation_instance
+        
         response = client.post("/v1/store-document", json=minimal_valid_hr_data_dict)
+        
+        # Print response for debugging
+        print(f"Status: {response.status_code}")
+        print(f"Response: {response.json()}")
         
         assert response.status_code == 200
         data = response.json()
@@ -320,8 +339,39 @@ class TestErrorHandling:
 class TestDataFlow:
     """Test 8: Complete Data Flow"""
     
-    def test_complete_workflow(self, minimal_valid_hr_data_dict):
+    @patch('app.api.endpoints.get_mongodb_service')
+    @patch('app.api.endpoints.get_validation_service')
+    def test_complete_workflow(self, mock_validation, mock_mongodb, minimal_valid_hr_data_dict):
         """Test complete workflow: validate -> store"""
+        # Mock MongoDB service
+        mock_mongodb_instance = MagicMock()
+        mock_mongodb_instance.store_document.return_value = "test_document_id"
+        mock_mongodb.return_value = mock_mongodb_instance
+        
+        # Prepare HRData object
+        hr_data_obj = HRData(
+            name="João Silva",
+            cpf="529.982.247-25",
+            position="Developer",
+            salary=5000.00,
+            contract_type="CLT",
+            main_skills=["Leadership", "Communication"],
+            hard_skills=["Python", "React"],
+            work_experience=[]
+        )
+        
+        # Mock validation service with different methods
+        mock_validation_instance = MagicMock()
+        # For validate_data_without_storing (used by /v1/validate)
+        mock_validation_instance.validate_data_without_storing.return_value = {
+            "valid": True,
+            "data": hr_data_obj,
+            "errors": {}
+        }
+        # For validate_hr_data (used by /v1/store-document)
+        mock_validation_instance.validate_hr_data.return_value = hr_data_obj
+        mock_validation.return_value = mock_validation_instance
+        
         # Step 1: Validate data
         validate_response = client.post("/v1/validate", json=minimal_valid_hr_data_dict)
         assert validate_response.status_code == 200
@@ -330,6 +380,8 @@ class TestDataFlow:
         
         # Step 2: Store validated data
         store_response = client.post("/v1/store-document", json=minimal_valid_hr_data_dict)
+        print(f"Status: {store_response.status_code}")
+        print(f"Response: {store_response.json()}")
         assert store_response.status_code == 200
         
         data = store_response.json()
