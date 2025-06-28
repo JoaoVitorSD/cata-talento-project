@@ -14,3 +14,4 @@ testcontainers>=3.7.1
 pytest-asyncio>=0.21.1
 pydantic-settings>=2.0.3
 httpx>=0.25.2
+python-dotenv>=1.0.0
