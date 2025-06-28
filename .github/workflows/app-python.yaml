@@ -50,13 +50,12 @@ jobs:
         if: ${{ always() }}
 
       - name: Upload coverage to Codecov
-        working-directory: ./backend
         uses: codecov/codecov-action@v5
         with:
-          directory: ./
+          directory: ./backend
           env_vars: OS,PYTHON_VERSION
           fail_ci_if_error: true
-          files: ./coverage.xml
+          files: ./backend/coverage.xml
           flags: unittests
           name: codecov-umbrella
           token: ${{ secrets.CODECOV_TOKEN }}
